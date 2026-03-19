@@ -1,0 +1,206 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 220 20% 5%;
+    --bg2: 220 17% 8%;
+    --bg3: 220 20% 12%;
+    --border: 220 15% 17%;
+    --border-hi: 220 14% 25%;
+    --text: 36 18% 86%;
+    --text2: 36 5% 52%;
+    --text3: 36 3% 32%;
+    --amber: 38 92% 50%;
+    --amber-dim: 38 92% 50%;
+    --green: 142 71% 45%;
+    --green-dim: 142 71% 45%;
+    --red: 0 84% 60%;
+    --red-dim: 0 84% 60%;
+
+    --background: var(--bg);
+    --foreground: var(--text);
+    --card: var(--bg2);
+    --card-foreground: var(--text);
+    --popover: var(--bg2);
+    --popover-foreground: var(--text);
+    --primary: var(--amber);
+    --primary-foreground: 220 20% 5%;
+    --secondary: var(--bg3);
+    --secondary-foreground: var(--text);
+    --muted: var(--bg3);
+    --muted-foreground: var(--text2);
+    --accent: var(--bg3);
+    --accent-foreground: var(--text);
+    --destructive: var(--red);
+    --destructive-foreground: var(--text);
+    --border: 220 15% 17%;
+    --input: 220 15% 17%;
+    --ring: var(--amber);
+    --radius: 0.5rem;
+
+    --sidebar-background: var(--bg2);
+    --sidebar-foreground: var(--text);
+    --sidebar-primary: var(--amber);
+    --sidebar-primary-foreground: 220 20% 5%;
+    --sidebar-accent: var(--bg3);
+    --sidebar-accent-foreground: var(--text);
+    --sidebar-border: 220 15% 17%;
+    --sidebar-ring: var(--amber);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    scrollbar-width: none;
+  }
+
+  body::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Syne', sans-serif;
+    letter-spacing: -0.04em;
+  }
+
+  .font-body {
+    font-family: 'DM Sans', sans-serif;
+}
+
+/* Markdown prose styles for report viewer */
+.prose-research {
+  color: hsl(36 18% 86%);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.prose-research h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: hsl(36 18% 86%);
+  border-bottom: 1px solid hsl(220 15% 17%);
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+  margin-top: 0;
+}
+
+.prose-research h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: hsl(36 18% 86%);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-research h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: hsl(36 18% 86%);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-research p {
+  margin-bottom: 1rem;
+}
+
+.prose-research a {
+  color: hsl(38 92% 50%);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-research code {
+  background: hsl(220 20% 12%);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+}
+
+.prose-research pre {
+  background: hsl(220 20% 12%);
+  border: 1px solid hsl(220 15% 17%);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.prose-research pre code {
+  background: none;
+  padding: 0;
+}
+
+.prose-research blockquote {
+  border-left: 2px solid hsl(38 92% 50%);
+  padding-left: 1rem;
+  color: hsl(36 5% 52%);
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.prose-research ul,
+.prose-research ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose-research li {
+  margin-bottom: 0.25rem;
+}
+
+.prose-research table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 13px;
+}
+
+.prose-research th,
+.prose-research td {
+  border: 1px solid hsl(220 15% 17%);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.prose-research th {
+  background: hsl(220 20% 12%);
+  font-weight: 600;
+}
+
+.prose-research hr {
+  border: none;
+  border-top: 1px solid hsl(220 15% 17%);
+  margin: 2rem 0;
+}
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .scrollbar-hide {
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
