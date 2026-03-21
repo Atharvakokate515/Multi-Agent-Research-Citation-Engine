@@ -17,23 +17,34 @@ Pipeline
         → Extractor Agent (fetch content & extract evidence)
         → Synthesizer Agent (produce final Markdown report)
 
-Environment variables required
--------------------------------
-    OPENAI_API_KEY   – OpenAI API key (used by all LLM calls)
+LLM Provider (auto-detected from env vars)
+------------------------------------------
+    Priority order:
+      1. LLM_PROVIDER env var  ("openai" | "huggingface") — explicit override
+      2. OPENAI_API_KEY present → OpenAI
+      3. HF_TOKEN present       → HuggingFace
+
+    OpenAI env vars:
+      OPENAI_API_KEY   – required
+      OPENAI_MODEL     – model name (default: gpt-4o)
+
+    HuggingFace env vars:
+      HF_TOKEN         – required
+      HF_MODEL         – model name (default: meta-llama/Meta-Llama-3.1-70B-Instruct)
+
+    Shared:
+      LLM_TEMPERATURE  – temperature (default: 0.3)
+
+Other required env vars
+-----------------------
     EXA_API_KEY      – Exa neural search API key
-    TAVILY_API_KEY   – Tavily search API key (fallback)
 
 Optional
 --------
-    LLM_MODEL        – Override model name (default: gpt-4o)
-    LLM_TEMPERATURE  – Override temperature (default: 0.3)
+    TAVILY_API_KEY   – Tavily search API key (fallback)
     OUTPUT_FILE      – Path to save the final report (default: research_report.md)
 """
 
-"""
-main.py  —  HuggingFace-powered pipeline + SSE event emission
-See docstring in original for full details.
-"""
 import argparse, asyncio, json, logging, os, sys, time
 from datetime import datetime
 from pathlib import Path
@@ -59,16 +70,74 @@ logging.basicConfig(level=logging.INFO, format=LOG_FORMAT,
               logging.FileHandler("research_crew.log", mode="a")])
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Provider detection
+# ---------------------------------------------------------------------------
+
+def _detect_provider() -> str:
+    """Return 'openai' or 'huggingface' based on env vars.
+
+    Priority:
+      1. LLM_PROVIDER env var (explicit override)
+      2. OPENAI_API_KEY present  → openai
+      3. HF_TOKEN present        → huggingface
+    """
+    explicit = os.getenv("LLM_PROVIDER", "").strip().lower()
+    if explicit in ("openai", "huggingface"):
+        return explicit
+
+    if os.getenv("OPENAI_API_KEY"):
+        return "openai"
+    if os.getenv("HF_TOKEN"):
+        return "huggingface"
+
+    # Neither found — return unknown so _check_env can give a clear error
+    return "unknown"
+
+
 def _check_env():
-    missing = [v for v in ("HF_TOKEN","EXA_API_KEY") if not os.getenv(v)]
-    if missing:
-        logger.error("Missing env vars: %s", ", ".join(missing)); sys.exit(1)
+    provider = _detect_provider()
+
+    if provider == "unknown":
+        logger.error(
+            "No LLM credentials found. "
+            "Set OPENAI_API_KEY (for OpenAI) or HF_TOKEN (for HuggingFace)."
+        )
+        sys.exit(1)
+
+    if provider == "openai" and not os.getenv("OPENAI_API_KEY"):
+        logger.error("LLM_PROVIDER=openai but OPENAI_API_KEY is not set.")
+        sys.exit(1)
+
+    if provider == "huggingface" and not os.getenv("HF_TOKEN"):
+        logger.error("LLM_PROVIDER=huggingface but HF_TOKEN is not set.")
+        sys.exit(1)
+
+    if not os.getenv("EXA_API_KEY"):
+        logger.error("EXA_API_KEY is required but not set.")
+        sys.exit(1)
+
     if not os.getenv("TAVILY_API_KEY"):
         logger.warning("TAVILY_API_KEY not set — fallback search unavailable.")
 
+    logger.info("LLM provider: %s", provider)
+
+
 def _build_llm() -> LLM:
-    model = os.getenv("HF_MODEL","meta-llama/Meta-Llama-3.1-70B-Instruct")
-    temp  = float(os.getenv("LLM_TEMPERATURE","0.3"))
+    provider = _detect_provider()
+    temp = float(os.getenv("LLM_TEMPERATURE", "0.3"))
+
+    if provider == "openai":
+        model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        logger.info("LLM: OpenAI | model: %s | temp: %.1f", model, temp)
+        return LLM(
+            model=model,
+            api_key=os.getenv("OPENAI_API_KEY"),
+            temperature=temp,
+        )
+
+    # huggingface
+    model = os.getenv("HF_MODEL", "meta-llama/Meta-Llama-3.1-70B-Instruct")
     logger.info("LLM: HuggingFace Inference API | model: %s | temp: %.1f", model, temp)
     return LLM(
         model=f"openai/{model}",
@@ -76,6 +145,10 @@ def _build_llm() -> LLM:
         base_url="https://api-inference.huggingface.co/v1/",
         temperature=temp,
     )
+
+# ---------------------------------------------------------------------------
+# Everything below is identical to the original
+# ---------------------------------------------------------------------------
 
 def _summarise(agent_id, raw):
     try:
@@ -134,7 +207,13 @@ def run_research_pipeline(topic: str, on_event: Optional[Callable[[dict],None]]=
     result  = crew.kickoff()
     elapsed = time.time()-t0
     logger.info("Done in %.1fs", elapsed)
-    model   = os.getenv("HF_MODEL","Meta-Llama-3.1-70B-Instruct")
+
+    provider = _detect_provider()
+    if provider == "openai":
+        model = os.getenv("OPENAI_MODEL", "gpt-4o")
+    else:
+        model = os.getenv("HF_MODEL", "Meta-Llama-3.1-70B-Instruct")
+
     return str(result) + (
         f"\n\n---\n*Generated {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} "
         f"· {elapsed:.0f}s · model: `{model}`*\n"
@@ -150,7 +229,7 @@ async def run_research_with_events(topic: str, event_queue: asyncio.Queue) -> No
     except asyncio.CancelledError:
         loop.call_soon_threadsafe(event_queue.put_nowait, {"type":"error","message":"Cancelled."})
     except Exception as exc:
-        logger.exception("Pipeline error"); 
+        logger.exception("Pipeline error")
         loop.call_soon_threadsafe(event_queue.put_nowait, {"type":"error","message":str(exc)})
 
 def _save_report(report):
@@ -160,7 +239,7 @@ def _save_report(report):
 
 def main():
     _check_env()
-    parser = argparse.ArgumentParser(description="Research Engine (HuggingFace)")
+    parser = argparse.ArgumentParser(description="Research Engine")
     parser.add_argument("--topic",  type=str, default=None)
     parser.add_argument("--output", type=str, default=None)
     args = parser.parse_args()

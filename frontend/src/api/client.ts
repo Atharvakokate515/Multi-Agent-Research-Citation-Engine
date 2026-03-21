@@ -7,7 +7,9 @@ export interface ResearchJob {
   created_at: string;
 }
 
-const BASE = '/api';
+// Only change from original: reads VITE_API_URL in production (Render).
+// In dev, falls back to '/api' so Vite's proxy still works unchanged.
+const BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

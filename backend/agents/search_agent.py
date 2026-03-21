@@ -38,7 +38,7 @@ import logging
 
 from crewai import Agent, LLM
 
-from research_crew.tools.search_tool import ExaSearchTool, TavilySearchTool
+from backend.tools.search_tool import ExaSearchTool, TavilySearchTool
 
 logger = logging.getLogger(__name__)
 

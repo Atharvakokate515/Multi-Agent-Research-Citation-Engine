@@ -6,9 +6,8 @@ Fetches a PDF from a URL and extracts clean plain text using PyMuPDF (fitz).
 Safety limits
 -------------
 * Fetched content is capped at 10 MB to avoid memory issues.
-* Extracted text is truncated to HARD_TEXT_LIMIT (3 000 chars) before being
-  returned to the calling agent.
-* Only the first MAX_PAGES pages are processed to keep latency bounded.
+* Extracted text is truncated to HARD_TEXT_LIMIT (3 000 chars).
+* Only the first MAX_PAGES pages are processed.
 """
 
 import io
@@ -18,19 +17,25 @@ from typing import Type
 
 import requests
 from pydantic import BaseModel, Field
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 try:
     from crewai.tools import BaseTool
 except ImportError:
     from langchain.tools import BaseTool  # type: ignore[no-redef]
 
-from research_crew.utils.token_utils import truncate_text
+# Fixed: use backend.* import (not research_crew.*)
+from backend.utils.token_utils import truncate_text
 
 logger = logging.getLogger(__name__)
 
 HARD_TEXT_LIMIT = 3_000   # characters returned to the agent
-MAX_PAGES       = 15      # pages scanned per PDF
+MAX_PAGES = 15            # pages scanned per PDF
 MAX_DOWNLOAD_MB = 10      # HTTP download cap
 
 
@@ -89,7 +94,7 @@ class PDFExtractorTool(BaseTool):
         text_parts = []
         for page_num in range(pages_read):
             page = doc[page_num]
-            text_parts.append(page.get_text("text"))  # type: ignore[attr-defined]
+            text_parts.append(page.get_text("text"))
 
         doc.close()
 
@@ -104,11 +109,8 @@ class PDFExtractorTool(BaseTool):
 def _clean_pdf_text(text: str) -> str:
     """Remove common PDF artefacts (ligatures, hyphenation, excessive whitespace)."""
     import re
-    # Remove null bytes and form-feed characters
     text = text.replace("\x00", "").replace("\x0c", "\n")
-    # Collapse repeated whitespace
     text = re.sub(r"[ \t]{2,}", " ", text)
-    # Remove lines that are purely whitespace
     lines = [ln.strip() for ln in text.splitlines()]
     lines = [ln for ln in lines if ln]
     return "\n".join(lines)

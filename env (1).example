@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# LLM Provider — set ONE of the two blocks below.
+# The app auto-detects which provider to use:
+#   1. LLM_PROVIDER (explicit override, optional)
+#   2. OPENAI_API_KEY present  → uses OpenAI
+#   3. HF_TOKEN present        → uses HuggingFace
+# If both keys are set, OpenAI is preferred unless LLM_PROVIDER=huggingface
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Optional explicit override: "openai" | "huggingface"
+# LLM_PROVIDER=openai
+
+# ── Option A: OpenAI ──────────────────────────────────────────────────────────
+# OPENAI_API_KEY=sk-...
+# OPENAI_MODEL=gpt-4o          # default: gpt-4o
+
+# ── Option B: HuggingFace ────────────────────────────────────────────────────
+# HF_TOKEN=hf_...
+# HF_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct   # default if not set
+
+# ── Shared ───────────────────────────────────────────────────────────────────
+LLM_TEMPERATURE=0.3
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Search APIs
+# ─────────────────────────────────────────────────────────────────────────────
+EXA_API_KEY=your_exa_key_here
+TAVILY_API_KEY=your_tavily_key_here     # optional, used as fallback
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Output
+# ─────────────────────────────────────────────────────────────────────────────
+OUTPUT_FILE=research_report.md

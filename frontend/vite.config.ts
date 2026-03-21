@@ -12,10 +12,15 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
+      // Forward all /api/* requests to the FastAPI backend.
+      // Do NOT rewrite the path — FastAPI routes are defined with the /api prefix.
+      "/api": {
+        target: "http://localhost:8000",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // SSE requires these headers to disable buffering
+        headers: {
+          "Cache-Control": "no-cache",
+        },
       },
     },
   },

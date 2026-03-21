@@ -15,7 +15,8 @@ import logging
 import re
 from typing import List
 
-from research_crew.utils.token_utils import count_tokens, truncate_text
+# Fixed: use backend.* import (not research_crew.*)
+from backend.utils.token_utils import count_tokens, truncate_text
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,6 @@ HARD_DOC_LIMIT: int = 3000   # chars, applied before chunking
 
 def _split_into_sentences(text: str) -> List[str]:
     """Split text into sentences using a simple regex heuristic."""
-    # Split on '.', '!', '?' followed by whitespace or end-of-string
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     return [s for s in sentences if s]
 
@@ -47,11 +47,9 @@ def chunk_text(
     max_tokens:
         Maximum tokens allowed per chunk.
     overlap_tokens:
-        Number of tokens from the previous chunk to prepend to the next,
-        ensuring context continuity.
+        Number of tokens from the previous chunk to prepend to the next.
     hard_limit_chars:
-        Character hard-limit applied to the whole document *before* chunking.
-        Prevents feeding enormous PDFs into the pipeline at all.
+        Character hard-limit applied to the whole document before chunking.
 
     Returns
     -------
@@ -85,9 +83,9 @@ def chunk_text(
 
         if current_tokens + sentence_tokens > max_tokens:
             # Flush current chunk
-            chunk_text_value = overlap_buffer + " ".join(current_sentences)
-            chunks.append(chunk_text_value.strip())
-            logger.debug("Chunk %d: %d tokens.", len(chunks), count_tokens(chunk_text_value))
+            chunk_text_val = overlap_buffer + " ".join(current_sentences)
+            chunks.append(chunk_text_val.strip())
+            logger.debug("Chunk %d: %d tokens.", len(chunks), count_tokens(chunk_text_val))
 
             # Build overlap buffer from the tail of the current chunk
             overlap_sentences: List[str] = []
@@ -109,18 +107,13 @@ def chunk_text(
 
     # Flush the last partial chunk
     if current_sentences:
-        chunk_text_value = overlap_buffer + " ".join(current_sentences)
-        chunks.append(chunk_text_value.strip())
+        chunk_text_val = overlap_buffer + " ".join(current_sentences)
+        chunks.append(chunk_text_val.strip())
 
     logger.info("Document split into %d chunks.", len(chunks))
     return chunks
 
 
 def summarise_chunks_placeholder(chunks: List[str]) -> str:
-    """Join chunk summaries into a single condensed representation.
-
-    In the full pipeline the Evidence Extraction Agent calls the LLM to
-    summarise each chunk individually; this helper merges those summaries.
-    Here we simply join them — real summarisation happens inside the agent.
-    """
+    """Join chunk summaries into a single condensed representation."""
     return "\n\n---\n\n".join(chunks)

@@ -1,8 +1,8 @@
 """
-api/app.py  —  FastAPI server with SSE streaming
-Start: uvicorn api.app:app --reload --port 8000
+app.py  —  FastAPI server with SSE streaming
+Start: uvicorn app:app --reload --port 8000
 """
-import asyncio, json, logging, uuid
+import asyncio, json, logging, os, uuid
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, Optional
 from fastapi import FastAPI, HTTPException
@@ -13,8 +13,20 @@ from pydantic import BaseModel, field_validator
 logger = logging.getLogger(__name__)
 app    = FastAPI(title="Research Citation Engine", version="2.0.0")
 
+# Only change from original: ALLOWED_ORIGINS env var lets you add your
+# Render frontend URL without touching code. Falls back to the original
+# three localhost origins so local dev is completely unchanged.
+_origins = [
+    "http://localhost:5173",
+    "http://localhost:4173",
+    "http://localhost:3000",
+]
+_extra = os.getenv("ALLOWED_ORIGINS", "")
+if _extra:
+    _origins += [o.strip() for o in _extra.split(",") if o.strip()]
+
 app.add_middleware(CORSMiddleware,
-    allow_origins=["http://localhost:5173","http://localhost:4173","http://localhost:3000"],
+    allow_origins=_origins,
     allow_methods=["*"], allow_headers=["*"])
 
 JOBS: Dict[str, Dict[str, Any]] = {}

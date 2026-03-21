@@ -33,38 +33,21 @@ Output contract (per source)
         "key_findings": ["...", "..."],
         "quotes": ["\"...exact quote...\""]
     }
-
-Design notes
-------------
-* Both PDFExtractorTool and WebParserTool already enforce the 3 000-char
-  hard limit before text reaches the LLM.
-* The agent receives structured source objects, not raw search results.
-* max_iter is set to 20 to accommodate up to 5 sources × multiple tool calls.
 """
 
 import logging
 
 from crewai import Agent, LLM
 
-from research_crew.tools.pdf_extractor import PDFExtractorTool
-from research_crew.tools.web_parser import WebParserTool
+# Fixed: use backend.* imports (not research_crew.*)
+from backend.tools.pdf_extractor import PDFExtractorTool
+from backend.tools.web_parser import WebParserTool
 
 logger = logging.getLogger(__name__)
 
 
 def build_extractor_agent(llm: LLM) -> Agent:
-    """Construct and return the Evidence Extraction Agent.
-
-    Parameters
-    ----------
-    llm:
-        A configured CrewAI LLM instance.
-
-    Returns
-    -------
-    Agent
-        Ready-to-use CrewAI Agent with content-access tools attached.
-    """
+    """Construct and return the Evidence Extraction Agent."""
     logger.info("Initialising Evidence Extraction Agent.")
 
     pdf_tool = PDFExtractorTool()
