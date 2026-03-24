@@ -1,9 +1,7 @@
 # Multi-Agent Research Citation Engine
 
-A production-grade AI research assistant built with **CrewAI** in Python.  
-Enter any research topic and receive a structured report with accurate citations,
-extracted evidence, and verified references — similar to Perplexity Deep Research
-or Elicit, but fully open and customisable.
+A production-grade AI research assistant built with **CrewAI** (Python) and a **React + Vite** frontend.  
+Enter any research topic and receive a structured Markdown report with accurate citations, extracted evidence, and verified references — similar to Perplexity Deep Research or Elicit, but fully open and customisable.
 
 ---
 
@@ -33,7 +31,25 @@ Extractor Agent    → [ { metrics, datasets, key_findings, quotes } ]
 Synthesizer Agent  → Final Markdown Report
 ```
 
-All agents communicate via **structured JSON only** — never raw documents.
+All agents communicate via **structured JSON only** — never raw documents.  
+The FastAPI backend streams agent progress to the React frontend via **Server-Sent Events (SSE)**.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend API | FastAPI + Uvicorn |
+| AI Agents | CrewAI (sequential pipeline) |
+| LLM | OpenAI GPT-4o **or** HuggingFace Inference API |
+| Search | Exa neural search (primary) + Tavily (fallback) |
+| PDF parsing | PyMuPDF (`fitz`) |
+| Web parsing | BeautifulSoup4 |
+| Frontend | React 18 + Vite + TypeScript |
+| UI | shadcn/ui + Tailwind CSS |
+| Streaming | Server-Sent Events (SSE) |
+| Deployment | Render (backend web service + static frontend) |
 
 ---
 
@@ -44,38 +60,35 @@ All agents communicate via **structured JSON only** — never raw documents.
 ```bash
 git clone <repo-url>
 cd multi-agent-researcher-2
+
+# Backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
+
+# Frontend
+cd frontend && npm install
 ```
 
-### 2. Configure API keys
+### 2. Configure environment
 
 ```bash
-cp .env.example .env
+cp "env (1).example" .env
 # Edit .env and fill in your keys
 ```
 
-| Variable | Required | Description |
-|---|---|---|
-| `OPENAI_API_KEY` | ✅ | OpenAI API key |
-| `EXA_API_KEY` | ✅ | [Exa](https://exa.ai) neural search key |
-| `TAVILY_API_KEY` | Recommended | [Tavily](https://tavily.com) fallback search |
-| `LLM_MODEL` | Optional | Model name (default: `gpt-4o`) |
-| `LLM_TEMPERATURE` | Optional | Temperature (default: `0.3`) |
-| `OUTPUT_FILE` | Optional | Report save path (default: `research_report.md`) |
-
-### 3. Run
+### 3. Run locally
 
 ```bash
-# Interactive mode
-python -m research_crew.main
+# Terminal 1 — Backend (from repo root)
+cd backend
+uvicorn app:app --reload --port 8000
 
-# Topic as argument
-python -m research_crew.main --topic "attention mechanisms in transformers"
-
-# Custom output file
-python -m research_crew.main --topic "diffusion models" --output diffusion.md
+# Terminal 2 — Frontend
+cd frontend
+npm run dev
 ```
+
+Open [http://localhost:8080](http://localhost:8080) — the Vite dev server proxies `/api/*` to the FastAPI backend automatically.
 
 ---
 
@@ -83,7 +96,7 @@ python -m research_crew.main --topic "diffusion models" --output diffusion.md
 
 ```
 multi-agent-researcher-2/
-├── research_crew/
+├── backend/
 │   ├── agents/
 │   │   ├── planner_agent.py       # Research Strategist
 │   │   ├── search_agent.py        # Academic Source Finder
@@ -91,7 +104,7 @@ multi-agent-researcher-2/
 │   │   ├── extractor_agent.py     # Technical Evidence Extractor
 │   │   └── synthesizer_agent.py   # Research Writer
 │   ├── tasks/
-│   │   ├── plannsing_task.py       # Query decomposition task
+│   │   ├── planning_task.py       # Query decomposition task
 │   │   ├── search_task.py         # Source retrieval task
 │   │   ├── validation_task.py     # Source scoring & filtering task
 │   │   ├── extraction_task.py     # Evidence extraction task
@@ -103,11 +116,116 @@ multi-agent-researcher-2/
 │   ├── utils/
 │   │   ├── token_utils.py         # count_tokens, truncate_text
 │   │   └── text_chunker.py        # chunk_text with overlap
-│   └── main.py                    # CLI entry point & pipeline runner
-├── requirements.txt
-├── .env.example
+│   ├── app.py                     # FastAPI server with SSE streaming
+│   ├── main.py                    # Pipeline runner & CLI entry point
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── api/client.ts          # REST API client
+│   │   ├── hooks/
+│   │   │   ├── useJobStream.ts    # SSE event consumer
+│   │   │   └── useElapsedTime.ts  # Timer hook
+│   │   ├── pages/
+│   │   │   ├── Index.tsx          # Home / topic input page
+│   │   │   └── ResearchPage.tsx   # Live pipeline + report view
+│   │   └── components/
+│   │       ├── PipelineSidebar.tsx # Agent status sidebar
+│   │       └── ReportViewer.tsx    # Markdown report renderer
+│   ├── package.json
+│   └── vite.config.ts
+├── render.yaml                    # Render deployment config
 └── README.md
 ```
+
+---
+
+## Environment Variables
+
+### LLM Provider — choose one
+
+The app auto-detects which provider to use:
+1. `LLM_PROVIDER` env var (explicit override)
+2. `OPENAI_API_KEY` present → OpenAI
+3. `HF_TOKEN` present → HuggingFace
+
+**Option A — OpenAI**
+
+```env
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o          # optional, default: gpt-4o
+```
+
+**Option B — HuggingFace Inference API**
+
+```env
+HF_TOKEN=hf_...
+HF_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct   # optional, this is the default
+```
+
+### Search APIs (backend)
+
+```env
+EXA_API_KEY=your_exa_key_here        # required — get free key at exa.ai
+TAVILY_API_KEY=your_tavily_key_here  # optional — fallback search at tavily.com
+```
+
+### Shared settings
+
+```env
+LLM_TEMPERATURE=0.3
+OUTPUT_FILE=research_report.md       # CLI mode only
+```
+
+### Frontend
+
+```env
+VITE_API_URL=https://your-backend.onrender.com/api   # production only
+# Leave unset in dev — Vite proxy handles /api → localhost:8000
+```
+
+---
+
+## Render Deployment
+
+> **Quick reference** — full config is in `render.yaml`.
+
+### Backend (Python web service)
+
+| Setting | Value |
+|---|---|
+| Runtime | Python |
+| Root directory | `backend` |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `uvicorn app:app --host 0.0.0.0 --port $PORT` |
+| Health check path | `/api/research` |
+
+**Environment variables to set in the Render dashboard:**
+
+```
+OPENAI_API_KEY     or     HF_TOKEN
+EXA_API_KEY
+TAVILY_API_KEY            (optional)
+HF_MODEL                  (if using HuggingFace)
+LLM_TEMPERATURE    0.3
+ALLOWED_ORIGINS    https://your-frontend.onrender.com
+```
+
+### Frontend (Static site)
+
+| Setting | Value |
+|---|---|
+| Runtime | Static |
+| Root directory | `frontend` |
+| Build command | `npm install && npm run build` |
+| Publish path | `./dist` |
+
+**Environment variables to set in the Render dashboard:**
+
+```
+VITE_API_URL       https://your-backend.onrender.com/api
+```
+
+> Set `ALLOWED_ORIGINS` on the backend **after** the frontend URL is known, then redeploy the backend.
 
 ---
 
@@ -161,12 +279,14 @@ The system enforces strict limits at every layer:
 | Support local LLMs (Ollama) | `main.py` `_build_llm()` — swap `LLM(model="ollama/...")` |
 | Add memory across sessions | `main.py` Crew constructor — set `memory=True` and configure a vector store |
 | Export to PDF | Post-process `research_report.md` with `pandoc` or `weasyprint` |
+| Add a new agent | Create agent + task files, wire into `main.py` pipeline |
 
 ---
 
 ## Requirements
 
 - Python ≥ 3.10
-- OpenAI API key with GPT-4o access
-- Exa API key (free tier available at [exa.ai](https://exa.ai))
+- Node.js ≥ 18
+- OpenAI API key **or** HuggingFace token
+- Exa API key (free tier at [exa.ai](https://exa.ai))
 - Tavily API key (optional, free tier at [tavily.com](https://tavily.com))
