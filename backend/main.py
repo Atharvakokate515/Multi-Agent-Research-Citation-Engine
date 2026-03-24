@@ -188,8 +188,10 @@ def run_research_pipeline(topic: str, on_event: Optional[Callable[[dict],None]]=
     et = build_extraction_task(extractor, vt)
     rt = build_summary_task(synth, et, topic)
 
-    reg = {id(pt):("planner",_summarise), id(st):("search",_summarise),
-           id(vt):("validator",_summarise), id(et):("extractor",_summarise),
+    reg = {id(pt):("planner",_summarise), 
+           id(st):("search",_summarise),
+           id(vt):("validator",_summarise), 
+           id(et):("extractor",_summarise),
            id(rt):("synthesizer",_summarise)}
 
     def cb(out):
