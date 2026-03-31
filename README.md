@@ -17,18 +17,45 @@ Enter any research topic and receive a structured Markdown report with accurate 
 
 ## Architecture
 
-```
-User Topic
-    ↓
-Planner Agent      → { "queries": [...] }
-    ↓
-Search Agent       → [ { title, url, source_type, snippet, ... } ]
-    ↓
-Validator Agent    → { "validated_sources": [ top 5 scored ] }
-    ↓
-Extractor Agent    → [ { metrics, datasets, key_findings, quotes } ]
-    ↓
-Synthesizer Agent  → Final Markdown Report
+```mermaid
+---
+config:
+  theme: neo-dark
+---
+flowchart TB
+    A(["User enters research topic<br>Frontend - React"]) --> B(["FastAPI Backend API"])
+    B --> C(["Planner Agent"])
+    C -- Generate 4–6 queries --> D(["Search Agent"])
+    D -- Fetch sources<br>Exa + Tavily --> E(["Validator Agent"])
+    E -- Score &amp; filter<br>top 5 sources --> F(["Extractor Agent"])
+    F -- Extract metrics,<br>datasets, findings, quotes --> G(["Synthesizer Agent"])
+    G -- Generate structured<br>Markdown report --> H(["Final Report"])
+    B -. SSE Streaming .-> I(["Frontend Live Updates"])
+    C -- JSON: queries --> D
+    D -- JSON: sources --> E
+    E -- JSON: validated_sources --> F
+    F -- JSON: extracted_evidence --> G
+    D --> J(["Search Tools<br>Exa / Tavily"])
+    F --> K(["PDF Parser<br>PyMuPDF"]) & L(["Web Parser<br>BeautifulSoup"])
+    H --> M(["Report Viewer<br>React"])
+
+     A:::frontend
+     B:::backend
+     C:::agent
+     D:::agent
+     E:::agent
+     F:::agent
+     G:::agent
+     H:::output
+     J:::tool
+     K:::tool
+     L:::tool
+     M:::frontend
+    classDef frontend fill:#1f2937,stroke:#10b981,stroke-width:2px,color:#f9fafb
+    classDef backend fill:#111827,stroke:#3b82f6,stroke-width:2px,color:#f9fafb
+    classDef agent fill:#1e40af,stroke:#60a5fa,stroke-width:2px,color:#f9fafb
+    classDef tool fill:#374151,stroke:#facc15,stroke-width:2px,color:#f9fafb
+    classDef output fill:#047857,stroke:#34d399,stroke-width:2px,color:#f9fafb
 ```
 
 All agents communicate via **structured JSON only** — never raw documents.  
@@ -139,95 +166,6 @@ multi-agent-researcher-2/
 
 ---
 
-## Environment Variables
-
-### LLM Provider — choose one
-
-The app auto-detects which provider to use:
-1. `LLM_PROVIDER` env var (explicit override)
-2. `OPENAI_API_KEY` present → OpenAI
-3. `HF_TOKEN` present → HuggingFace
-
-**Option A — OpenAI**
-
-```env
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o          # optional, default: gpt-4o
-```
-
-**Option B — HuggingFace Inference API**
-
-```env
-HF_TOKEN=hf_...
-HF_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct   # optional, this is the default
-```
-
-### Search APIs (backend)
-
-```env
-EXA_API_KEY=your_exa_key_here        # required — get free key at exa.ai
-TAVILY_API_KEY=your_tavily_key_here  # optional — fallback search at tavily.com
-```
-
-### Shared settings
-
-```env
-LLM_TEMPERATURE=0.3
-OUTPUT_FILE=research_report.md       # CLI mode only
-```
-
-### Frontend
-
-```env
-VITE_API_URL=https://your-backend.onrender.com/api   # production only
-# Leave unset in dev — Vite proxy handles /api → localhost:8000
-```
-
----
-
-## Render Deployment
-
-> **Quick reference** — full config is in `render.yaml`.
-
-### Backend (Python web service)
-
-| Setting | Value |
-|---|---|
-| Runtime | Python |
-| Root directory | `backend` |
-| Build command | `pip install -r requirements.txt` |
-| Start command | `uvicorn app:app --host 0.0.0.0 --port $PORT` |
-| Health check path | `/api/research` |
-
-**Environment variables to set in the Render dashboard:**
-
-```
-OPENAI_API_KEY     or     HF_TOKEN
-EXA_API_KEY
-TAVILY_API_KEY            (optional)
-HF_MODEL                  (if using HuggingFace)
-LLM_TEMPERATURE    0.3
-ALLOWED_ORIGINS    https://your-frontend.onrender.com
-```
-
-### Frontend (Static site)
-
-| Setting | Value |
-|---|---|
-| Runtime | Static |
-| Root directory | `frontend` |
-| Build command | `npm install && npm run build` |
-| Publish path | `./dist` |
-
-**Environment variables to set in the Render dashboard:**
-
-```
-VITE_API_URL       https://your-backend.onrender.com/api
-```
-
-> Set `ALLOWED_ORIGINS` on the backend **after** the frontend URL is known, then redeploy the backend.
-
----
 
 ## Token Safety
 
